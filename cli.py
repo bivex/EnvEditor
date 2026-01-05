@@ -7,7 +7,7 @@
 # https://github.com/bivex
 #
 # Created: 2026-01-05T01:55:34
-# Last Updated: 2026-01-05T01:57:23
+# Last Updated: 2026-01-05T01:58:07
 #
 # Licensed under the MIT License.
 # Commercial licensing available upon request.
@@ -79,12 +79,13 @@ def handle_env_command(subcommand, args):
     """Handle environment variable commands."""
     if subcommand == 'list':
         print("Environment Variables:")
-        print("NAME=VALUE format (simplified for demo)")
-        # In a real implementation, this would load actual env vars
+        print("NAME=VALUE format (showing all)")
+        print("-" * 80)
+        # Show all environment variables
         import os
-        for name, value in sorted(os.environ.items())[:10]:  # Show first 10
+        for name, value in sorted(os.environ.items()):
             print(f"{name}={value}")
-        print("... (showing first 10 environment variables)")
+        print(f"\nTotal: {len(os.environ)} environment variables")
     elif subcommand == 'get' and args:
         import os
         var_name = args[0]
@@ -106,24 +107,22 @@ def handle_process_command(subcommand, args):
     if subcommand == 'list':
         print("Running Processes:")
         print("PID       Name              Command")
-        print("-" * 50)
-        # Simplified process listing
+        print("-" * 80)
+        # Show all accessible processes
         import psutil
         count = 0
         for proc in psutil.process_iter():
-            if count >= 10:  # Limit to 10 processes
-                break
             try:
                 pid = proc.pid
                 name = proc.name()[:18] if proc.name() else 'unknown'
                 cmdline = proc.cmdline()
                 cmd = ' '.join(cmdline[:2]) if cmdline else ''
-                cmd = cmd[:25] + '...' if len(cmd) > 25 else cmd
-                print(f"{pid:<10} {name:<18} {cmd:<25}")
+                cmd = cmd[:35] + '...' if len(cmd) > 35 else cmd
+                print(f"{pid:<10} {name:<18} {cmd:<35}")
                 count += 1
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-        print("... (showing first 10 processes)")
+        print(f"\nTotal: {count} accessible processes")
     else:
         print("Usage: python cli.py process <list> [args]")
 
