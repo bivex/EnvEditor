@@ -22,25 +22,32 @@ import argparse
 from typing import List, Optional
 from pathlib import Path
 
-# Add src to path for imports
+# Import modules - handle different import scenarios
 current_dir = Path(__file__).parent
-src_dir = current_dir.parent
-sys.path.insert(0, str(src_dir))
+project_root = current_dir.parent
+sys.path.insert(0, str(project_root))
 
-# Import using absolute paths from src directory
-from application.services import (
-    VariableManagementService,
-    ContextManagementService,
-    ProcessInvestigationService
-)
-from infrastructure.adapters.repositories import (
-    InMemoryEnvironmentVariableRepository,
-    InMemoryEnvironmentContextRepository,
-    InMemoryAuditRepository
-)
-from infrastructure.adapters.system_process_adapter import SystemProcessAdapter
-from domain.services import DefaultVariableValidationService, DefaultAuditService
-from cli.commands import env_commands, process_commands, export_commands
+try:
+    # Try direct imports first
+    from application.services import (
+        VariableManagementService,
+        ContextManagementService,
+        ProcessInvestigationService
+    )
+    from infrastructure.adapters.repositories import (
+        InMemoryEnvironmentVariableRepository,
+        InMemoryEnvironmentContextRepository,
+        InMemoryAuditRepository
+    )
+    from infrastructure.adapters.system_process_adapter import SystemProcessAdapter
+    from domain.services import DefaultVariableValidationService, DefaultAuditService
+    from cli.commands import env_commands, process_commands, export_commands
+except ImportError as e:
+    # If imports fail, provide helpful error message
+    print(f"Import error: {e}", file=sys.stderr)
+    print("This CLI needs to be run from the project root directory.", file=sys.stderr)
+    print("Try: python cli.py <command>", file=sys.stderr)
+    sys.exit(1)
 
 
 class CLIApp:
