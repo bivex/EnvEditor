@@ -2,42 +2,63 @@
 """
 Environment Variable Editor - Main Application
 
-Entry point for the PyQt GUI application.
-Composes all dependencies and starts the application.
+Entry point for both GUI and CLI modes.
+Use --cli flag for command line interface, otherwise launches GUI.
 """
 
 import sys
-from PyQt6.QtWidgets import QApplication
+from pathlib import Path
 
-# Domain layer
-from src.domain.services import DefaultVariableValidationService, DefaultAuditService
-
-# Infrastructure layer
-from src.infrastructure.adapters.repositories import (
-    InMemoryEnvironmentVariableRepository,
-    InMemoryEnvironmentContextRepository,
-    InMemoryAuditRepository
-)
-from src.infrastructure.adapters.system_process_adapter import SystemProcessAdapter
-
-# Application layer
-from src.application.services import (
-    VariableManagementService,
-    ContextManagementService,
-    AuditQueryService,
-    ProcessInvestigationService
-)
-
-# Presentation layer
-from src.presentation.main_window import MainWindow
+# Add src to path for imports
+src_path = Path(__file__).parent / "src"
+sys.path.insert(0, str(src_path))
 
 
 def main() -> None:
     """
     Main application entry point.
 
-    Sets up dependency injection and starts the GUI application.
+    Checks command line arguments to determine GUI or CLI mode.
     """
+    # Check if CLI mode is requested
+    if len(sys.argv) > 1 and sys.argv[1] in ['--cli', 'cli']:
+        # Remove the CLI flag from arguments
+        sys.argv.pop(1)
+
+        # Import and run CLI
+        from cli.main import main as cli_main
+        sys.exit(cli_main())
+
+    # Default to GUI mode
+    _run_gui()
+
+
+def _run_gui() -> None:
+    """Run the GUI application."""
+    from PyQt6.QtWidgets import QApplication
+
+    # Domain layer
+    from domain.services import DefaultVariableValidationService, DefaultAuditService
+
+    # Infrastructure layer
+    from infrastructure.adapters.repositories import (
+        InMemoryEnvironmentVariableRepository,
+        InMemoryEnvironmentContextRepository,
+        InMemoryAuditRepository
+    )
+    from infrastructure.adapters.system_process_adapter import SystemProcessAdapter
+
+    # Application layer
+    from application.services import (
+        VariableManagementService,
+        ContextManagementService,
+        AuditQueryService,
+        ProcessInvestigationService
+    )
+
+    # Presentation layer
+    from presentation.main_window import MainWindow
+
     # Create infrastructure adapters (outermost layer)
     variable_repository = InMemoryEnvironmentVariableRepository()
     context_repository = InMemoryEnvironmentContextRepository()
