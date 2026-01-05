@@ -1,4 +1,16 @@
-#!/usr/bin/env python3
+
+# Copyright (c) 2026 Bivex
+#
+# Author: Bivex
+# Available for contact via email: support@b-b.top
+# For up-to-date contact information:
+# https://github.com/bivex
+#
+# Created: 2026-01-05T01:58:45
+# Last Updated: 2026-01-05T01:58:45
+#
+# Licensed under the MIT License.
+# Commercial licensing available upon request.
 """
 Simple runner script for the Environment Variable Editor.
 
