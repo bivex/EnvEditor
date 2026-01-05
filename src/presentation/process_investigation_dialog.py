@@ -244,11 +244,16 @@ class ProcessInvestigationDialog(QDialog):
         self.copy_env_button.clicked.connect(self.copy_process_environment)
         self.copy_env_button.setEnabled(False)  # Enable when process is selected
 
+        self.copy_all_envs_button = QPushButton("Copy All Environments")
+        self.copy_all_envs_button.clicked.connect(self.copy_all_process_environments)
+        self.copy_all_envs_button.setEnabled(False)  # Enable after processes are loaded
+
         self.close_button = QPushButton("Close")
         self.close_button.clicked.connect(self.accept)
 
         button_layout.addWidget(self.copy_markdown_button)
         button_layout.addWidget(self.copy_env_button)
+        button_layout.addWidget(self.copy_all_envs_button)
         button_layout.addStretch()
         button_layout.addWidget(self.close_button)
 
@@ -271,8 +276,9 @@ class ProcessInvestigationDialog(QDialog):
         self.processes = processes
         self.display_processes(processes)
 
-        # Enable copy to markdown button
+        # Enable copy buttons
         self.copy_markdown_button.setEnabled(True)
+        self.copy_all_envs_button.setEnabled(True)
 
         # Update user filter
         users = set(p.username for p in processes if p.username)
@@ -418,6 +424,134 @@ class ProcessInvestigationDialog(QDialog):
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to copy environment variables: {e}")
+
+    def copy_all_process_environments(self) -> None:
+        """Copy environment variables from all accessible processes to clipboard."""
+        if not self.processes:
+            QMessageBox.warning(self, "No Data", "No process information available.")
+            return
+
+        try:
+            # Show progress dialog for this potentially long operation
+            self.progress_bar.setVisible(True)
+            self.progress_bar.setRange(0, len(self.processes))
+            self.progress_bar.setValue(0)
+
+            # Generate comprehensive environment export
+            all_env_content = self._generate_all_process_environments_text()
+
+            self.progress_bar.setVisible(False)
+
+            if not all_env_content.strip():
+                QMessageBox.warning(
+                    self, "No Environment Data",
+                    "Could not retrieve environment variables from any processes. "
+                    "Most system processes restrict environment access for security."
+                )
+                return
+
+            # Copy to clipboard
+            from PyQt6.QtWidgets import QApplication
+            clipboard = QApplication.clipboard()
+            clipboard.setText(all_env_content)
+
+            QMessageBox.information(
+                self, "All Environments Copied",
+                f"Environment variables from all accessible processes have been copied to clipboard."
+            )
+
+        except Exception as e:
+            self.progress_bar.setVisible(False)
+            QMessageBox.critical(self, "Error", f"Failed to copy all environments: {e}")
+
+    def _generate_all_process_environments_text(self) -> str:
+        """Generate comprehensive text with environment variables from all processes."""
+        from datetime import datetime
+
+        lines = []
+        lines.append("# Complete System Environment Variables Report")
+        lines.append("")
+        lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lines.append(f"**Total Processes Scanned:** {len(self.processes)}")
+        lines.append("")
+
+        # Collect environment data from all processes
+        process_env_data = []
+        accessible_count = 0
+        total_variables = 0
+
+        for i, process in enumerate(self.processes):
+            try:
+                # Update progress
+                self.progress_bar.setValue(i + 1)
+
+                # Try to get environment variables for this process
+                report = self.process_service.get_process_environment_report(process.pid)
+
+                if report and report.all_variables:
+                    process_env_data.append((process, report))
+                    accessible_count += 1
+                    total_variables += len(report.all_variables)
+
+            except Exception:
+                # Skip processes we can't access
+                continue
+
+        lines.append(f"**Processes with Accessible Environments:** {accessible_count}")
+        lines.append(f"**Total Environment Variables:** {total_variables}")
+        lines.append("")
+
+        # Generate detailed report for each process
+        for process, report in process_env_data:
+            lines.append(f"## Process: {process.name} (PID: {process.pid})")
+            lines.append("")
+            lines.append(f"**Command:** {process.command_line}")
+            lines.append(f"**User:** {process.username}")
+            lines.append(f"**Variables:** {len(report.all_variables)}")
+            lines.append("")
+
+            # Environment variables in simple format
+            lines.append("### Environment Variables")
+            lines.append("```bash")
+            for name, value in sorted(report.all_variables.items()):
+                # Escape quotes for shell safety
+                safe_value = value.replace('"', '\\"').replace('`', '\\`').replace('$', '\\$')
+                lines.append(f'{name}="{safe_value}"')
+            lines.append("```")
+            lines.append("")
+
+        # Summary section
+        lines.append("## Summary")
+        lines.append("")
+        lines.append("### Processes by Environment Access")
+        lines.append(f"- **Total Processes:** {len(self.processes)}")
+        lines.append(f"- **Accessible:** {accessible_count}")
+        lines.append(f"- **Inaccessible:** {len(self.processes) - accessible_count}")
+        lines.append(f"- **Total Variables:** {total_variables}")
+        lines.append("")
+
+        # Environment variable frequency analysis
+        if process_env_data:
+            lines.append("### Most Common Environment Variables")
+            lines.append("")
+
+            # Count frequency of each variable name across all processes
+            var_frequency = {}
+            for _, report in process_env_data:
+                for name in report.all_variables.keys():
+                    var_frequency[name] = var_frequency.get(name, 0) + 1
+
+            # Show top 20 most common variables
+            common_vars = sorted(var_frequency.items(), key=lambda x: x[1], reverse=True)[:20]
+            for name, count in common_vars:
+                percentage = (count / accessible_count) * 100
+                lines.append(".1f")
+
+        lines.append("")
+        lines.append("---")
+        lines.append("*Generated by Environment Variable Editor - Complete System Environment Report*")
+
+        return "\n".join(lines)
 
     def _generate_process_environment_text(self, report) -> str:
         """Generate formatted text with process environment variables."""
