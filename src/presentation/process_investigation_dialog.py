@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QComboBox, QGroupBox, QProgressBar, QMessageBox, QTabWidget,
     QWidget, QTreeWidget, QTreeWidgetItem
 )
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon, QClipboard
 from typing import List, Dict, Optional
@@ -366,7 +367,7 @@ class ProcessInvestigationDialog(QDialog):
             markdown_content = self._generate_processes_markdown()
 
             # Copy to clipboard
-            clipboard = self.screen().clipboard()
+            clipboard = QApplication.clipboard()
             clipboard.setText(markdown_content)
 
             QMessageBox.information(
